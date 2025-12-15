@@ -1,15 +1,26 @@
 <!-- 
-    [실행 방법 / HOW TO RUN]
-    1. 이 내용을 메모장(Notepad)에 복사해 붙여넣으세요.
-    2. "game.html" 이름으로 저장하세요 (.html 확장자 필수).
-    3. 저장된 파일을 크롬, 엣지, 웨일 등 웹 브라우저로 여세요.
+    [GitHub 배포 방법 / HOW TO DEPLOY]
+    1. 이 파일의 이름을 "index.html"로 저장하세요.
+    2. GitHub 저장소(Repository)를 만들고 이 파일을 업로드하세요.
+    3. 저장소 설정(Settings) -> Pages 메뉴에서 Branch를 'main'으로 설정하고 Save하세요.
+    4. 잠시 후 제공되는 링크(https://아이디.github.io/저장소명)로 접속하면 게임이 실행됩니다.
 -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>K-직장인 생존기 (Standalone)</title>
+    
+    <!-- 검색 엔진 및 소셜 공유를 위한 메타 태그 -->
+    <title>K-직장인 생존기</title>
+    <meta name="description" content="지친 직장인의 퇴근길 서바이벌 게임. 야근과 회식을 피해 집으로 가세요!">
+    <meta property="og:title" content="K-직장인 생존기">
+    <meta property="og:description" content="오늘도 무사히 퇴근할 수 있을까? 직장인 생존 런 게임">
+    <meta property="og:type" content="website">
+
+    <!-- 파비콘 (브라우저 탭 아이콘 - 서류가방 이모지) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💼</text></svg>">
+
     <style>
         body {
             margin: 0;
