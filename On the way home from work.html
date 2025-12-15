@@ -1,25 +1,36 @@
+<!-- 
+    [실행 방법 / HOW TO RUN]
+    1. 이 내용을 메모장(Notepad)에 복사해 붙여넣으세요.
+    2. "game.html" 이름으로 저장하세요 (.html 확장자 필수).
+    3. 저장된 파일을 크롬, 엣지, 웨일 등 웹 브라우저로 여세요.
+-->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>K-직장인 생존기 (Text Free Ver.)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>K-직장인 생존기 (Standalone)</title>
     <style>
         body {
             margin: 0;
             padding: 0;
             background-color: #050505;
-            overflow: hidden;
+            overflow: hidden; /* 스크롤 방지 */
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             font-family: 'Courier New', Courier, monospace;
+            /* 모바일에서 터치 시 화면 확대나 스크롤 되는 것 방지 */
+            touch-action: none; 
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         canvas {
             background-color: #1a1a1d;
-            image-rendering: pixelated;
+            image-rendering: pixelated; /* 도트 그래픽 선명하게 */
+            image-rendering: crisp-edges;
             box-shadow: 0 0 30px rgba(100, 0, 0, 0.2);
             max-width: 100%;
             max-height: 100%;
@@ -73,6 +84,8 @@
             align-items: center;
             transition: all 0.2s;
             box-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
+            /* 모바일 탭 하이라이트 제거 */
+            -webkit-tap-highlight-color: transparent; 
         }
 
         #restart-btn:hover {
@@ -156,6 +169,7 @@
         let gameSpeed = 3;
         
         // --- 사운드 시스템 (Web Audio API) ---
+        // 브라우저 정책상 사용자가 클릭 등 상호작용을 해야 소리가 나옵니다.
         let audioCtx = null;
         let isAudioStarted = false;
 
@@ -172,31 +186,39 @@
             const osc1 = audioCtx.createOscillator();
             const gain1 = audioCtx.createGain();
             osc1.type = 'sine';
-            osc1.frequency.value = 55; 
+            osc1.frequency.value = 55; // 낮은 드론 사운드
+            
             const lfo = audioCtx.createOscillator();
             lfo.type = 'sine';
             lfo.frequency.value = 0.2; 
             const lfoGain = audioCtx.createGain();
             lfoGain.gain.value = 0.02; 
+            
             osc1.connect(gain1);
             lfo.connect(gain1.gain);
             gain1.connect(audioCtx.destination);
             gain1.gain.value = 0.05; 
+            
             osc1.start();
             lfo.start();
             
+            // 노이즈 (도시 소음)
             const bufferSize = audioCtx.sampleRate * 2; 
             const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
             const data = buffer.getChannelData(0);
             for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.5;
+            
             const noise = audioCtx.createBufferSource();
             noise.buffer = buffer;
             noise.loop = true;
+            
             const noiseFilter = audioCtx.createBiquadFilter();
             noiseFilter.type = 'lowpass';
             noiseFilter.frequency.value = 400; 
+            
             const noiseGain = audioCtx.createGain();
             noiseGain.gain.value = 0.03;
+            
             noise.connect(noiseFilter);
             noiseFilter.connect(noiseGain);
             noiseGain.connect(audioCtx.destination);
@@ -233,7 +255,7 @@
             osc.stop(audioCtx.currentTime + 0.5);
         }
 
-        // --- 그래픽 ---
+        // --- 그래픽 & 게임 로직 ---
 
         function resize() {
             let scale = Math.min(window.innerWidth / GAME_WIDTH, window.innerHeight / GAME_HEIGHT);
@@ -242,7 +264,7 @@
             canvas.height = GAME_HEIGHT;
             canvas.style.width = `${GAME_WIDTH * scale}px`;
             canvas.style.height = `${GAME_HEIGHT * scale}px`;
-            ctx.imageSmoothingEnabled = false;
+            ctx.imageSmoothingEnabled = false; // 픽셀 아트 유지
         }
         window.addEventListener('resize', resize);
         resize();
@@ -250,26 +272,22 @@
         function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1) + min); }
         function randomChoice(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
-        // --- 장애물 스프라이트 (텍스트 대신 이미지) ---
+        // --- 장애물 클래스 ---
         class Obstacle {
             constructor() {
                 this.x = GAME_WIDTH;
-                this.y = GAME_HEIGHT - 20; // 기준 y값
+                this.y = GAME_HEIGHT - 20; 
                 this.markedForDeletion = false;
                 
-                // 장애물 타입: 서류더미, 술병, 알람시계
                 const types = ['papers', 'bottle', 'clock'];
                 this.type = randomChoice(types);
 
                 if (this.type === 'papers') {
-                    this.w = 16; this.h = 20;
-                    this.y -= this.h;
+                    this.w = 16; this.h = 20; this.y -= this.h;
                 } else if (this.type === 'bottle') {
-                    this.w = 10; this.h = 20;
-                    this.y -= this.h;
+                    this.w = 10; this.h = 20; this.y -= this.h;
                 } else if (this.type === 'clock') {
-                    this.w = 16; this.h = 16;
-                    this.y -= this.h;
+                    this.w = 16; this.h = 16; this.y -= this.h;
                 }
             }
 
@@ -279,53 +297,34 @@
             }
 
             draw() {
-                const pixelSize = 2; // 그리기 배율
-                // 픽셀 아트 렌더링
                 if (this.type === 'papers') {
-                    // 흰색 서류 더미
                     ctx.fillStyle = PALETTE.obsPaper;
                     ctx.fillRect(Math.floor(this.x), Math.floor(this.y), this.w, this.h);
-                    // 서류 줄무늬 (글씨)
                     ctx.fillStyle = '#ddd';
                     ctx.fillRect(Math.floor(this.x + 2), Math.floor(this.y + 4), this.w - 4, 2);
                     ctx.fillRect(Math.floor(this.x + 2), Math.floor(this.y + 10), this.w - 4, 2);
                     ctx.fillRect(Math.floor(this.x + 2), Math.floor(this.y + 16), this.w - 4, 2);
-                    // 테두리
-                    ctx.strokeStyle = '#999';
-                    ctx.lineWidth = 1;
+                    ctx.strokeStyle = '#999'; ctx.lineWidth = 1;
                     ctx.strokeRect(Math.floor(this.x), Math.floor(this.y), this.w, this.h);
-
                 } else if (this.type === 'bottle') {
-                    // 초록색 소주병
                     ctx.fillStyle = PALETTE.obsBottle;
-                    // 몸통
                     ctx.fillRect(Math.floor(this.x), Math.floor(this.y + 6), this.w, this.h - 6);
-                    // 병목
                     ctx.fillRect(Math.floor(this.x + 3), Math.floor(this.y), 4, 6);
-                    // 라벨
                     ctx.fillStyle = PALETTE.obsBottleLabel;
                     ctx.fillRect(Math.floor(this.x + 1), Math.floor(this.y + 10), this.w - 2, 6);
-
                 } else if (this.type === 'clock') {
-                    // 빨간 알람시계
                     ctx.fillStyle = PALETTE.obsClock;
-                    // 몸통 (원형 느낌 사각형)
                     ctx.fillRect(Math.floor(this.x), Math.floor(this.y + 2), this.w, this.h - 4);
                     ctx.fillRect(Math.floor(this.x + 2), Math.floor(this.y), this.w - 4, this.h);
-                    // 시계 얼굴 (흰색)
                     ctx.fillStyle = PALETTE.obsClockFace;
                     ctx.fillRect(Math.floor(this.x + 3), Math.floor(this.y + 3), this.w - 6, this.h - 6);
-                    // 바늘
                     ctx.fillStyle = '#000';
                     ctx.fillRect(Math.floor(this.x + this.w/2 - 1), Math.floor(this.y + this.h/2 - 1), 4, 2);
-                    // 다리
-                    ctx.fillStyle = '#555';
-                    ctx.fillRect(Math.floor(this.x + 2), Math.floor(this.y + this.h - 2), 2, 2);
-                    ctx.fillRect(Math.floor(this.x + this.w - 4), Math.floor(this.y + this.h - 2), 2, 2);
                 }
             }
         }
 
+        // --- 배경 건물 ---
         class Building {
             constructor(layer) {
                 this.layer = layer;
@@ -366,6 +365,7 @@
             }
         }
 
+        // --- 플레이어 ---
         class Player {
             constructor() {
                 this.width = 14;
@@ -379,7 +379,6 @@
                 this.isJumping = false;
                 this.frame = 0;
                 this.frameTimer = 0;
-                // 이전과 동일한 스프라이트 데이터
                 this.sprites = [
                     ["0000000","0022200","0022200","0003000","0111144","0111144","0110100","0100010"],
                     ["0000000","0022200","0022211","0003000","0441110","0441110","0010010","0001000"],
@@ -427,6 +426,7 @@
             }
         }
 
+        // --- 메인 게임 루프 ---
         let obstacles = [];
         let farBuildings = Array.from({length: 5}, () => new Building('far'));
         let nearBuildings = Array.from({length: 4}, () => new Building('near'));
@@ -448,7 +448,6 @@
         }
 
         function checkCollision(rect1, rect2) {
-            // 충돌 판정 (히트박스 조금 더 관대하게 수정)
             return (rect1.x < rect2.x + rect2.w - 4 &&
                     rect1.x + rect1.width > rect2.x + 4 &&
                     rect1.y < rect2.y + rect2.h - 4 &&
@@ -490,6 +489,7 @@
         }
 
         function draw() {
+            // 잔상 효과
             ctx.fillStyle = 'rgba(26, 26, 29, 0.3)'; 
             ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
@@ -508,6 +508,7 @@
             ctx.fillStyle = PALETTE.ground;
             ctx.fillRect(0, GAME_HEIGHT - 20, GAME_WIDTH, 20);
             
+            // 도로
             ctx.fillStyle = '#444'; 
             const offset = (frameCount * gameSpeed) % 40;
             for (let i = 0; i < GAME_WIDTH + 40; i += 40) {
@@ -519,6 +520,7 @@
 
             ctx.restore();
 
+            // 스캔라인
             ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
             for (let i = 0; i < GAME_HEIGHT; i += 2) {
                 ctx.fillRect(0, i, GAME_WIDTH, 1);
@@ -539,6 +541,7 @@
         }
 
         function handleInput() {
+            // 게임 내 첫 클릭 시 오디오 초기화 (브라우저 정책)
             if (!isAudioStarted) initAudio(); 
             if (gameState === 'playing') player.jump();
         }
@@ -548,12 +551,13 @@
         });
         canvas.addEventListener('mousedown', handleInput);
         canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
+            e.preventDefault(); // 터치 시 스크롤 방지
             handleInput();
         }, {passive: false});
 
         restartBtn.addEventListener('click', initGame);
 
+        // 게임 자동 시작
         initGame();
 
     </script>
